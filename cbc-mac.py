@@ -2,13 +2,14 @@
 
 class UFE:
     def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=1):
+        self.modeOfOperation = modeOfOperation
         self.k1 = key1
         self.k2 = key2
         self.k3 = key3
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
-        # Create AES (self.AES) from mode of operation
-        self.AES = ""
+        #
+    
 
     def encrypt(self, message):
         pass
