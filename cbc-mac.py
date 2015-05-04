@@ -2,12 +2,13 @@
 
 class UFE:
     def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=1):
-        self.mode = modeOfOperations
         self.k1 = key1
         self.k2 = key2
         self.k3 = key3
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
+        # Create AES (self.AES) from mode of operation
+        self.AES = ""
 
     def encrypt(self, message):
         pass
@@ -15,7 +16,7 @@ class UFE:
     def decrypt(self, ciphertext):
         pass
 
-    def generate_r(self, message):
+    def small_erection(self, message):
         # Eugene get this shit done
         pass
 
