@@ -1,5 +1,5 @@
 ###UFE Regular
-
+import random
 class UFE:
     def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=1):
         self.modeOfOperation = modeOfOperation
@@ -8,19 +8,45 @@ class UFE:
         self.k3 = key3
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
-        #
-    
-
+        self.blockSize = 16
+        self.r = []
     def encrypt(self, message):
         pass
 
     def decrypt(self, ciphertext):
         pass
 
-    def small_erection(self, message):
+    def eugenes_large_erection(self, message):
         # Eugene get this shit done
-        pass
+        messageBitArray = self.string_to_bits(message)
+        lengthOfR = len(messageBitArray)/self.m2rRatio
+        rand = random.getrandbits(lengthOfR)
+        rand = self.int_to_bitlist(rand)
+        while len(rand) < self.blockSize:
+            rand.append(0)
+        self.r = rand
+        return 'r is set'
 
+    # returns a list of 0's and 1's
+    def string_to_bits(self, s):
+        result = []
+        for c in s:
+            bits = bin(ord(c))[2:]
+            bits = '00000000'[len(bits):] + bits
+            result.extend([int(b) for b in bits])
+        return result
+
+    # input is a list of bits
+    def bits_to_string(self, bits):
+        chars = []
+        for b in range(len(bits) / 8):
+            byte = bits[b*8:(b+1)*8]
+            chars.append(chr(int(''.join([str(bit) for bit in byte]), 2)))
+        return ''.join(chars)
+
+    # converts an integer into a list of bits
+    def int_to_bitlist(self, n):
+        return [int(digit) for digit in bin(n)[2:]]
 
 def cbc_mac(cipher,encrypt,k2,k3):
     n = len(cipher)
@@ -49,3 +75,5 @@ def ctr(r,n,k1,encrypt):
         p[i]=encrypt(k1,r+i)
         i+=1
     return p
+
+
