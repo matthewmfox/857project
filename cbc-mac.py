@@ -9,25 +9,28 @@ class UFE:
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
         self.blockSize = 16
-        self.r = []
     def encrypt(self, message):
         pass
 
     def decrypt(self, ciphertext):
         pass
 
+    # returns a list, first element is r without padding represented as list of bits
+    # second element is r with padding represented as list of bits
     def eugenes_large_erection(self, message):
         # Eugene get this shit done
+        result = []
         messageBitArray = self.string_to_bits(message)
         lengthOfR = len(messageBitArray)/self.m2rRatio
         rand = random.getrandbits(lengthOfR)
         rand = self.int_to_bitlist(rand)
+        result.append(rand)
         while len(rand) < self.blockSize:
             rand.append(0)
-        self.r = rand
-        return 'r is set'
+        result.append(rand)
+        return result
 
-    # returns a list of 0's and 1's
+    # returns a list of bits
     def string_to_bits(self, s):
         result = []
         for c in s:
