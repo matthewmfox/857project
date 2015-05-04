@@ -9,6 +9,17 @@ class UFE:
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
 
+    def encrypt(self, message):
+        pass
+
+    def decrypt(self, ciphertext):
+        pass
+
+    def generate_r(self, message):
+        # Eugene get this shit done
+        pass
+
+
 def cbc_mac(cipher,encrypt,k2,k3):
     n = len(cipher)
     i=0
