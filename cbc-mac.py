@@ -1,5 +1,14 @@
 ###UFE Regular
 
+class UFE:
+    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=1):
+        self.mode = modeOfOperations
+        self.k1 = key1
+        self.k2 = key2
+        self.k3 = key3
+        self.modifiedUFE = modifiedUFE
+        self.m2rRatio = m2rRatio
+
 def cbc_mac(cipher,encrypt,k2,k3):
     n = len(cipher)
     i=0
