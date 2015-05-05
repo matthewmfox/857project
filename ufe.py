@@ -1,6 +1,7 @@
 import imp
 imp.load_source('pyaes', './pyaes/pyaes/aes.py')
 import pyaes
+import os
 import math
 import random
 class UFE:
@@ -83,13 +84,13 @@ class UFE:
         
         # CBC Mode of Operation
         elif self.modeOfOperation == "CBC":
-            (ciphertextBlocks, numBlocks) = self.split_ciphertext_into_blocks(ciphertext)
-            
+            ciphertextBlocks = self.split_ciphertext_into_blocks(ciphertext)
+            numBlocks=len(ciphertextBlocks)
             plaintext = ''
             aes = pyaes.AESModeOfOperationCBC(self.k1, iv = self.bits_to_string(r_padded))
             for i in range(numBlocks):
                 plaintext = plaintext + aes.decrypt(ciphertextBlocks[i])
-            
+            plaintext=self.unpad_message_CBC(plaintext)
             
             
         # CFB Mode of Operation
@@ -109,49 +110,50 @@ class UFE:
         # returns a list of plaintexts in 16 byte blocks and the number of blocks
         message_bytes = [ ord(c) for c in message ]
         padded_blocks = []
-        numBlocks = math.ceil(len(message_bytes)/16.0)
+        numBlocks = int(math.ceil(len(message_bytes)/16.0))
         # pad
         for i in range((numBlocks*16) - len(message_bytes)):
             # TODO change the padding structure so we don't change the final letter of the message
             message_bytes.append(0)
-        for i in range(numBlocks/8):
-            block = message_bytes[i*8:(i+1)*8]
+        for i in range(numBlocks):
+            block = message_bytes[i*16:(i+1)*16]
             string_block = []
             for b in block:
                 string_block.append(chr(b))
             padded_blocks.append(string_block)
         
         return (padded_blocks, numBlocks)
-            
+
+    def unpad_message_CBC(self,message):
+        message_bytes = [ ord(c) for c in message if ord(c)!=0]
+        return "".join([chr(x) for x in message_bytes])
+
+                    
     def split_ciphertext_into_blocks(self, ciphertext):
         # break the cipher text into blocks of 16 letters
         blocks = []
         block = ''
         for i in range(len(ciphertext)):
-            if i%16 == 0:
+            block = block + str(ciphertext[i])
+            if (i+1)%16 == 0:
                 blocks.append(block)
                 block = ''
-            else:
-                block = block + ciphertext[i]
         return blocks
             
         
     
     # Takes in message as unicode string, outputs CBC_MAC as a list of bytes (in integer form)
-    def cbc_mac(self, message):
-        aes1 = pyaes.AES(self.k2)
-        aes2 = pyaes.AES(self.k3)
+    def cbc_mac(self, ciphertext):
+        aes1 = pyaes.AESModeOfOperationCBC(self.k2)
         # convert message to bytes
-        message_bytes = [ ord(c) for c in message ]
+        #blocks = [ ord(c) for c in ciphertext ]
+        blocks = self.split_ciphertext_into_blocks(self.string_to_bits(ciphertext))
         #ciphertext = aes.encrypt(plaintext_bytes)
-        n = len(message)
-        i=0
-        last=0
-        while i<n-1:
-            nxt=aes1.encrypt(last^message_bytes[i])
-            i+=1
-            last=nxt
-        nxt=aes2.encrypt(last^message_bytes[n-1])
+        n = len(blocks)
+        for i in range(n-1):
+            nxt=aes1.encrypt(blocks[i])
+        aes2 = pyaes.AESModeOfOperationCBC(self.k3,iv = nxt)
+        nxt=self.bits_to_bytes(self.string_to_bits(aes2.encrypt(blocks[n-1])))
         return nxt
         
         
@@ -161,7 +163,12 @@ class UFE:
         # Eugene get this shit done
         result = []
         messageBitArray = self.string_to_bits(message)
-        lengthOfR = len(messageBitArray)/self.m2rRatio
+        if self.modifiedUFE:
+            lengthOfR = math.ceil(len(messageBitArray)/self.m2rRatio)
+            if lengthofR>16:
+                lengthOfR=16
+        else:
+            lengthOfR = 16
         rand = random.getrandbits(lengthOfR)
         rand = self.int_to_bitlist(rand)
         result.append(rand)
@@ -217,22 +224,9 @@ class UFE:
             result.extend([int(b) for b in bits])
         return result    
 
-#def ufe(r,k1,k2,k3,message,encrypt):
-#    p=ctr(r,len(message),k1,encrypt)
-#    cipher=[]
-#    for i in message:
-#        cipher[i]=message[i]^p[i]
-#    X=cbc_mac(cipher,encrypt,k2,k3)
-#    sigma=r^X
-#    return cipher,sigma
-#
-#def ctr(r,n,k1,encrypt):
-#    i=0
-#    p=[]
-#    while i<n:
-#        p[i]=encrypt(k1,r+i)
-#        i+=1
-#    return p
-a = UFE('CTR')
-print a.bits_to_int([1,1,0])
-
+key1=os.urandom(16)
+key2=os.urandom(16)
+key3=os.urandom(16)
+a = UFE('CTR',key1,key2,key3)
+b = UFE('CBC',key1,key2,key3)
+c = UFE('CFB',key1,key2,key3)

@@ -59,7 +59,7 @@ __all__ = ["AES", "AESModeOfOperationCTR", "AESModeOfOperationCBC", "AESModeOfOp
 
 
 def _compact_word(word):
-    return (word[0] << 24) | (word[1] << 16) | (word[2] << 8) | word[3]
+    return (word[0] << 24) | (word[1] << 16) |(word[2] << 8) | word[3]
 
 def _string_to_bytes(text):
     return list(ord(c) for c in text)
