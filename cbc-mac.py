@@ -1,6 +1,7 @@
 import imp
 imp.load_source('pyaes', './pyaes/pyaes/aes.py')
 import pyaes
+import math
 
 ###UFE Regular
 import random
@@ -13,12 +14,14 @@ class UFE:
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
         self.blockSize = 16
+        
+        
     def encrypt(self, message):
         # create random r
-        r = 0
+        (r_padded, r_original) = self.eugenes_large_erection(message)
         # encrypt message and create ciphertext
         if self.modeOfOperation == "CTR":
-            counter = pyaes.Counter(initial_value = r)
+            counter = pyaes.Counter(initial_value = self.bits_to_int(r_padded))
             aes = pyaes.AESModeOfOperationCTR(self.k1, counter = counter)
             ciphertext = aes.encrypt(message)
         
@@ -27,7 +30,7 @@ class UFE:
         elif self.modeOfOperation == "CBC":
             (paddedMessageBlocks, numBlocks) = self.pad_message_CBC(message)
             ciphertext = ''
-            aes = pyaes.AESModeOfOperationCBC(self.k1, iv = r)
+            aes = pyaes.AESModeOfOperationCBC(self.k1, iv = self.bits_to_string(r_padded))
             for i in range(numBlocks):
                 ciphertext = ciphertext + aes.encrypt(paddedMessageBlocks[i])
             
@@ -35,30 +38,108 @@ class UFE:
             
         # CFB Mode of Operation
         elif self.modeOfOperation == "CFB":
-            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = r)
+            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded))
             ciphertext = aes.encrypt(message)
             
         # create CBC-MAC of ciphertext
-        CBC_MAC = self.cbc_mac(self, message)
+        CBC_MAC = self.cbc_mac(ciphertext)
         
-        return (ciphertext, CBC_MAC)
+        
+        # CBC_MAC is a list of bytes represented as integers
+        # xor CMB_MAC with r
+        r = self.bits_to_bytes(r_original)
+        sigma = []
+        for i in range(len(r)):
+            sigma.append(CBC_MAC[i]^r[i])
+            
+        # sigma is a list of bytes represented as integers
+        sigmaStr = ''
+        for s in sigma:
+            sigmaStr = sigmaStr + chr(s)
+        return (ciphertext, sigma)
+        
 
 
-    def decrypt(self, ciphertext):
-        pass
+    def decrypt(self, ciphertext, sigma):
+        
+        # calculate CBC_MAC of ciphertext
+        CBC_MAC = self.cbc_mac(ciphertext)
+        
+        # find r from sigma
+        r = []
+        for i in range(len(sigma)):
+            r.append(chr(CBC_MAC[i]^sigma[i]))
+        # turn r into eugene's form
+        r_original = self.string_to_bits(r)
+        # create r_padded
+        # r_padded = self.pad(r_original)
+        r_padded = []
+        
+        
+        # decrypt using AES
+        if self.modeOfOperation == "CTR":
+            counter = pyaes.Counter(initial_value = self.bits_to_int(r_padded))
+            aes = pyaes.AESModeOfOperationCTR(self.k1, counter = counter)
+            plaintext = aes.decrypt(ciphertext)
+        
+        
+        # CBC Mode of Operation
+        elif self.modeOfOperation == "CBC":
+            (ciphertextBlocks, numBlocks) = self.split_ciphertext_into_blocks(ciphertext)
+            
+            plaintext = ''
+            aes = pyaes.AESModeOfOperationCBC(self.k1, iv = self.bits_to_string(r_padded))
+            for i in range(numBlocks):
+                plaintext = plaintext + aes.decrypt(ciphertextBlocks[i])
+            
+            
+            
+        # CFB Mode of Operation
+        elif self.modeOfOperation == "CFB":
+            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded))
+            plaintext = aes.decrypt(ciphertext)
+            
+        # return plaintext
+        return plaintext
+        
 
 
-    def small_erection(self, message):
-        # Eugene get this shit done
-        # Can't be bigger than 16 bits 
-        pass
     
     def pad_message_CBC(self, message):
         # TODO
         # pad message so that it is a multiple of 16 bytes
         # returns a list of plaintexts in 16 byte blocks and the number of blocks
-        pass
+        message_bytes = [ ord(c) for c in message ]
+        padded_blocks = []
+        numBlocks = math.ceil(len(message_bytes)/16.0)
+        # pad
+        for i in range((numBlocks*16) - len(message_bytes)):
+            # TODO change the padding structure so we don't change the final letter of the message
+            message_bytes.append(0)
+        for i in range(numBlocks/8):
+            block = message_bytes[i*8:(i+1)*8]
+            string_block = []
+            for b in block:
+                string_block.append(chr(b))
+            padded_blocks.append(string_block)
+        
+        return (padded_blocks, numBlocks)
+            
+    def split_ciphertext_into_blocks(self, ciphertext):
+        # break the cipher text into blocks of 16 letters
+        blocks = []
+        block = ''
+        for i in range(len(ciphertext)):
+            if i%16 == 0:
+                blocks.append(block)
+                block = ''
+            else:
+                block = block + ciphertext[i]
+        return blocks
+            
+        
     
+    # Takes in message as unicode string, outputs CBC_MAC as a list of bytes (in integer form)
     def cbc_mac(self, message):
         aes1 = pyaes.AES(self.k2)
         aes2 = pyaes.AES(self.k3)
@@ -69,12 +150,10 @@ class UFE:
         i=0
         last=0
         while i<n-1:
-            nxt=aes1.encrypt(chr(last)^message_bytes[i])
+            nxt=aes1.encrypt(last^message_bytes[i])
             i+=1
             last=nxt
-        nxt=aes2.encrypt(chr(last)^message_bytes[n-1])
-        # convert bytes back to string
-        nxt = "".join(map(chr, nxt))
+        nxt=aes2.encrypt(last^message_bytes[n-1])
         return nxt
         
         
@@ -109,6 +188,15 @@ class UFE:
             byte = bits[b*8:(b+1)*8]
             chars.append(chr(int(''.join([str(bit) for bit in byte]), 2)))
         return ''.join(chars)
+        
+    # input is a list of bits, output is a list of ints
+    def bits_to_bytes(self, bits):
+        byteList = []
+        for b in range(len(bits) / 8):
+            byte = bits[b*8:(b+1)*8]
+            byteList.append(int(''.join([str(bit) for bit in byte]), 2))
+        return byteList
+        
 
     # converts an integer into a list of bits
     def int_to_bitlist(self, n):
