@@ -4,8 +4,9 @@ import pyaes
 import os
 import math
 import random
+
 class UFE:
-    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=0.125):
+    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=0.0625):
         self.modeOfOperation = modeOfOperation
         self.k1 = key1
         self.k2 = key2
@@ -45,9 +46,10 @@ class UFE:
         
         # CBC_MAC is a list of bytes represented as integers
         # xor CMB_MAC with r
-        r = self.bits_to_bytes(r_original)
+        ##THINK ABOUT THIS
+        r = self.bits_to_bytes(r_padded)
         sigma = []
-        for i in range(len(r)):
+        for i in range(len(r_original)):
             sigma.append(CBC_MAC[i]^r[i])
             
         # sigma is a list of bytes represented as integers
@@ -164,18 +166,18 @@ class UFE:
         result = []
         messageBitArray = self.string_to_bits(message)
         if self.modifiedUFE:
-            lengthOfR = math.ceil(len(messageBitArray)/self.m2rRatio)
-            if lengthofR>16:
+            lengthOfR = int(math.ceil(len(messageBitArray)*self.m2rRatio))
+            if lengthOfR>16:
                 lengthOfR=16
         else:
             lengthOfR = 16
         rand = random.getrandbits(lengthOfR)
         rand = self.int_to_bitlist(rand)
-        result.append(rand)
-        while len(rand) < self.blockSize:
-            rand.append(0)
-        result.append(rand)
-        return result
+        for item in rand:
+            result.append(item)
+        while len(result) < self.blockSize:
+            result.append(0)
+        return result,rand
 
 
     # input is a list of bits, output is a list of ints
@@ -222,11 +224,4 @@ class UFE:
             bits = bin(ord(c))[2:]
             bits = '00000000'[len(bits):] + bits
             result.extend([int(b) for b in bits])
-        return result    
-
-key1=os.urandom(16)
-key2=os.urandom(16)
-key3=os.urandom(16)
-a = UFE('CTR',key1,key2,key3)
-b = UFE('CBC',key1,key2,key3)
-c = UFE('CFB',key1,key2,key3)
+        return result

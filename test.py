@@ -10,6 +10,7 @@ if __name__=='__main__':
     CTR = UFE("CTR",key1,key2,key3)
     CBC = UFE("CBC",key1,key2,key3)
     CFB = UFE("CFB",key1,key2,key3)
+    CTR2 = UFE("CTR",key1,key2,key3,modifiedUFE=True)
 
     ciphertext, sigma = CTR.encrypt("I love 6.857, it's such a great class")
     print repr(ciphertext)
@@ -29,3 +30,9 @@ if __name__=='__main__':
     print CFB.decrypt(ciphertext3,sigma3)
     print "\r"
     
+    ciphertext4, sigma4 = CTR2.encrypt("This is just a test")
+    print repr(ciphertext4)
+    print sigma4
+    print "\r"
+    print CTR2.decrypt(ciphertext4,sigma4)
+    print"\r"
