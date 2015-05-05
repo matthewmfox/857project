@@ -11,7 +11,7 @@ class UFE:
         self.k3 = key3
         self.modifiedUFE = modifiedUFE
         self.m2rRatio = m2rRatio
-        self.blockSize = 16
+        self.blockSize = 128
 
     def encrypt(self, message):
         # create random r
@@ -169,14 +169,14 @@ class UFE:
         result.append(rand)
         return result
 
-    # returns a list of bits
-    def string_to_bits(self, s):
-        result = []
-        for c in s:
-            bits = bin(ord(c))[2:]
-            bits = '00000000'[len(bits):] + bits
-            result.extend([int(b) for b in bits])
-        return result
+
+    # input is a list of bits, output is a list of ints
+    def bits_to_bytes(self, bits):
+        byteList = []
+        for b in range(len(bits) / 8):
+            byte = bits[b*8:(b+1)*8]
+            byteList.append(int(''.join([str(bit) for bit in byte]), 2))
+        return byteList
 
     # input is a list of bits
     def bits_to_string(self, bits):
@@ -185,28 +185,36 @@ class UFE:
             byte = bits[b*8:(b+1)*8]
             chars.append(chr(int(''.join([str(bit) for bit in byte]), 2)))
         return ''.join(chars)
-        
-    # input is a list of bits, output is a list of ints
-    def bits_to_bytes(self, bits):
-        byteList = []
-        for b in range(len(bits) / 8):
-            byte = bits[b*8:(b+1)*8]
-            byteList.append(int(''.join([str(bit) for bit in byte]), 2))
-        return byteList
-        
+
+    # input is list of bits, returns integer
+    def bits_to_int(self, bits):
+    e = 0
+    res = 0
+    for i in reversed(range(len(bits))):
+        if bits[i] == 1:
+            res = res + (2**e)
+        e = e + 1
+    return res
 
     # converts an integer into a list of bits
     def int_to_bitlist(self, n):
         return [int(digit) for digit in bin(n)[2:]]
 
-    def bits_to_int(self, bits):
-        e = 0
-        res = 0
-        for i in reversed(range(len(bits))):
-            if bits[i] == 1:
-                res = res + (2**e)
-            e = e + 1
+    def pad_r(self, r):
+        res = []
+        while len(r) < self.blockSize:
+            r.append(0)
+        res = r
         return res
+
+    # returns a list of bits
+    def string_to_bits(self, s):
+        result = []
+        for c in s:
+            bits = bin(ord(c))[2:]
+            bits = '00000000'[len(bits):] + bits
+            result.extend([int(b) for b in bits])
+        return result    
 
 #def ufe(r,k1,k2,k3,message,encrypt):
 #    p=ctr(r,len(message),k1,encrypt)
