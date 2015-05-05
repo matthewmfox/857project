@@ -4,14 +4,14 @@ import pyaes
 import math
 import random
 class UFE:
-    def __init__(self, modeOfOperation):
+    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=0.125):
         self.modeOfOperation = modeOfOperation
-        # self.k1 = key1
-        # self.k2 = key2
-        # self.k3 = key3
-        # self.modifiedUFE = modifiedUFE
-        # self.m2rRatio = m2rRatio
-        # self.blockSize = 16
+        self.k1 = key1
+        self.k2 = key2
+        self.k3 = key3
+        self.modifiedUFE = modifiedUFE
+        self.m2rRatio = m2rRatio
+        self.blockSize = 16
 
     def encrypt(self, message):
         # create random r
