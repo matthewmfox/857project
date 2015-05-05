@@ -70,7 +70,8 @@ class UFE:
         r_original = self.string_to_bits(r)
         # create r_padded
         # r_padded = self.pad(r_original)
-        r_padded = []
+        
+        r_padded = self.pad_r(r_original)
         
         
         # decrypt using AES
@@ -188,13 +189,13 @@ class UFE:
 
     # input is list of bits, returns integer
     def bits_to_int(self, bits):
-    e = 0
-    res = 0
-    for i in reversed(range(len(bits))):
-        if bits[i] == 1:
-            res = res + (2**e)
-        e = e + 1
-    return res
+        e = 0
+        res = 0
+        for i in reversed(range(len(bits))):
+            if bits[i] == 1:
+                res = res + (2**e)
+            e = e + 1
+        return res
 
     # converts an integer into a list of bits
     def int_to_bitlist(self, n):
