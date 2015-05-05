@@ -5,14 +5,14 @@ import pyaes
 ###UFE Regular
 import random
 class UFE:
-    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=0.125):
+    def __init__(self, modeOfOperation):
         self.modeOfOperation = modeOfOperation
-        self.k1 = key1
-        self.k2 = key2
-        self.k3 = key3
-        self.modifiedUFE = modifiedUFE
-        self.m2rRatio = m2rRatio
-        self.blockSize = 16
+        # self.k1 = key1
+        # self.k2 = key2
+        # self.k3 = key3
+        # self.modifiedUFE = modifiedUFE
+        # self.m2rRatio = m2rRatio
+        # self.blockSize = 16
     def encrypt(self, message):
         # create random r
         r = 0
@@ -114,6 +114,14 @@ class UFE:
     def int_to_bitlist(self, n):
         return [int(digit) for digit in bin(n)[2:]]
 
+    def bits_to_int(self, bits):
+        e = 0
+        res = 0
+        for i in reversed(range(len(bits))):
+            if bits[i] == 1:
+                res = res + (2**e)
+            e = e + 1
+        return res
 
 #def ufe(r,k1,k2,k3,message,encrypt):
 #    p=ctr(r,len(message),k1,encrypt)
@@ -131,5 +139,6 @@ class UFE:
 #        p[i]=encrypt(k1,r+i)
 #        i+=1
 #    return p
-
+a = UFE('CTR')
+print a.bits_to_int([1,1,0])
 
