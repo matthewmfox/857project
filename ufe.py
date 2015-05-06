@@ -4,9 +4,11 @@ import pyaes
 import os
 import math
 import random
+import time
+import string
 
 class UFE:
-    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=0.0625):
+    def __init__(self, modeOfOperation, key1, key2, key3, modifiedUFE=False, m2rRatio=16):
         self.modeOfOperation = modeOfOperation
         self.k1 = key1
         self.k2 = key2
@@ -37,7 +39,8 @@ class UFE:
             
         # CFB Mode of Operation
         elif self.modeOfOperation == "CFB":
-            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded))
+            #aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded))
+            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded), segment_size = 16)
             ciphertext = aes.encrypt(message)
             
         # create CBC-MAC of ciphertext
@@ -97,7 +100,7 @@ class UFE:
             
         # CFB Mode of Operation
         elif self.modeOfOperation == "CFB":
-            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded))
+            aes = pyaes.AESModeOfOperationCFB(self.k1, iv = self.bits_to_string(r_padded), segment_size = 16)
             plaintext = aes.decrypt(ciphertext)
             
         # return plaintext
@@ -225,3 +228,181 @@ class UFE:
             bits = '00000000'[len(bits):] + bits
             result.extend([int(b) for b in bits])
         return result
+
+
+
+
+
+####### MODES OF OPERATION PERFORMANCE TESTING
+
+def MOO_performance_testing(message):
+    
+    # generate keys (128 bit)
+    key1 = os.urandom(16)
+    key2 = os.urandom(16)
+    key3 = os.urandom(16)
+    
+    # create the UFEs, one for each mode
+    UFE_CTR = UFE("CTR", key1, key2, key3)
+    UFE_CBC = UFE("CBC", key1, key2, key3)
+    UFE_CFB = UFE("CFB", key1, key2, key3)
+    
+    
+    # TESTING SPEED OF CTR
+    
+    CTR_start = time.clock()
+    # encrypt using CTR
+    (CTR_ciphertext, CTR_sigma) = UFE_CTR.encrypt(message)
+    CTR_enc_done = time.clock()
+    # decrypt using CTR
+    CTR_plaintext = UFE_CTR.decrypt(CTR_ciphertext, CTR_sigma)
+    CTR_dec_done = time.clock()
+    # check that UFE worked correctly
+    assert CTR_plaintext == message, "UFE_CTR failed"
+    CTR_enc_time = CTR_enc_done-CTR_start
+    CTR_dec_time = CTR_dec_done-CTR_enc_done
+    
+    
+    
+    # TESTING SPEED OF CBC
+    
+    CBC_start = time.clock()
+    # encrypt using CBC 
+    (CBC_ciphertext, CBC_sigma) = UFE_CBC.encrypt(message)
+    CBC_enc_done = time.clock()
+    # decrypt using CBC
+    CBC_plaintext = UFE_CBC.decrypt(CBC_ciphertext, CBC_sigma)
+    CBC_dec_done = time.clock()
+    # check that UFE worked correctly
+    assert CBC_plaintext == message, "UFE_CBC failed"
+    CBC_enc_time = CBC_enc_done-CBC_start
+    CBC_dec_time = CBC_dec_done-CBC_enc_done
+    
+    
+    
+    
+    # TESTING SPEED OF CFB
+    
+    CFB_start = time.clock()
+    # encrypt using CFB 
+    (CFB_ciphertext, CFB_sigma) = UFE_CFB.encrypt(message)
+    CFB_enc_done = time.clock()
+    # decrypt using CFB
+    CFB_plaintext = UFE_CFB.decrypt(CFB_ciphertext, CFB_sigma)
+    CFB_dec_done = time.clock()
+    # check that UFE worked properly
+    assert CFB_plaintext == message, "UFE_CFB failed"
+    CFB_enc_time = CFB_enc_done-CFB_start
+    CFB_dec_time = CFB_dec_done-CFB_enc_done
+    
+    # returns [CTR_speed_triple, CBC_speed_triple, CFB_speed_triple]
+    return [(CTR_enc_time, CTR_dec_time, CTR_enc_time+CTR_dec_time), (CBC_enc_time, CBC_dec_time, CBC_enc_time+CBC_dec_time), (CFB_enc_time, CFB_dec_time, CFB_enc_time+CFB_dec_time)]
+
+
+
+
+
+def repeated_performance_testing_MOO(string_length=160, repetitions=5000):
+    results = []
+    for i in range(repetitions):
+        # create the random stirng
+        random_message = ''.join(random.SystemRandom().choice(string.printable) for _ in range(string_length))
+        result = MOO_performance_testing(random_message)
+        
+        results.append(result)
+
+            
+        
+    # group results by MOO
+    CTR_results = []
+    CBC_results = []
+    CFB_results = []
+    for i in range(repetitions):
+        CTR_results.append(results[i][0])
+        CBC_results.append(results[i][1])
+        CFB_results.append(results[i][2])
+    
+    # find the averages
+    CTR_enc_sum = 0
+    CTR_dec_sum = 0
+    CBC_enc_sum = 0
+    CBC_dec_sum = 0
+    CFB_enc_sum = 0
+    CFB_dec_sum = 0
+    
+    for i in range(repetitions):
+        CTR_enc_sum += CTR_results[i][0]
+        CTR_dec_sum += CTR_results[i][0]
+        CBC_enc_sum += CBC_results[i][0]
+        CBC_dec_sum += CBC_results[i][1]
+        CFB_enc_sum += CFB_results[i][0]
+        CFB_dec_sum += CFB_results[i][1]
+        
+    div = float(repetitions)
+    CTR_avgs = (CTR_enc_sum/div, CTR_dec_sum/div)
+    CBC_avgs = (CBC_enc_sum/div, CBC_dec_sum/div)
+    CFB_avgs = (CFB_enc_sum/div, CFB_dec_sum/div)
+    return [CTR_avgs, CBC_avgs, CFB_avgs]
+
+
+############# m2r PERFORMANCE TESTING
+
+def m2r_performance_testing(message, m2rRatio):
+    
+    # generate keys (128 bit)
+    key1 = os.urandom(16)
+    key2 = os.urandom(16)
+    key3 = os.urandom(16)
+    
+    # create the UFEs, one for each mode
+    ufe = UFE("CTR", key1, key2, key3, modifiedUFE=True, m2rRatio=m2rRatio)
+    
+    
+    
+    # TESTING SPEED OF CTR
+    
+    start = time.clock()
+    # encrypt using CTR
+    (ciphertext, sigma) = ufe.encrypt(message)
+    enc_done = time.clock()
+    # decrypt using CTR
+    plaintext = ufe.decrypt(ciphertext, sigma)
+    dec_done = time.clock()
+    # check that UFE worked correctly
+    assert plaintext == message, "UFE failed"
+    enc_time = enc_done-start
+    dec_time = dec_done-enc_done
+
+        
+    return (enc_time, dec_time)
+    
+    
+def repeated_performance_testing_m2r(string_length=160, repetitions=500, m2rRatios = [10, 15, 20, 25, 30, 35, 40]):
+    allResults = {}
+    for m2rRatio in m2rRatios:
+        results = []
+        for i in range(repetitions):
+            # create the random stirng
+            random_message = ''.join(random.SystemRandom().choice(string.printable) for _ in range(string_length))
+            result = m2r_performance_testing(random_message, m2rRatio)
+            results.append(result)
+        allResults[str(m2rRatio)] = results
+    
+    for k in allResults.keys():
+        r = allResults[k]
+        encTotal = 0
+        decTotal = 0
+        for i in range(repetitions):
+            encTotal += r[i][0]
+            decTotal += r[i][1]
+        encAvg = encTotal/float(repetitions)
+        decAvg = decTotal/float(repetitions)
+        allResults[k] = (encAvg, decAvg)
+        
+            
+    return allResults
+    
+    
+
+
+    
